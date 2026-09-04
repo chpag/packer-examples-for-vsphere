@@ -93,7 +93,7 @@ output "uploaded_iso_files" {
     ) : (
     {
       for k, v in vsphere_content_library_item.iso_upload :
-      k => "content-library://${var.vsphere_content_library}/${v.name}"
+      k => "content-library://${var.vsphere_content_library}/${v.name}/${basename(k)}"
     }
   )
 }
