@@ -81,3 +81,6 @@ venv/
 .cache/
 ## Ignore site directory.
 .site/
+
+## Ignore local project.json overrides.
+project.local.json
