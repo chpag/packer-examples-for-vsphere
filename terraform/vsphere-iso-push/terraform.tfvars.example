@@ -1,0 +1,32 @@
+##################################################################################
+# VARIABLES
+##################################################################################
+
+# Credentials
+
+vsphere_server   = "sfo-m01-vc01.example.com"
+vsphere_username = "svc-terraform-vsphere@example.com"
+vsphere_password = "************"
+vsphere_insecure = false
+
+# vSphere Settings
+
+vsphere_datacenter = "sfo-m01-dc01"
+
+# Upload Destination
+# Set push_type to "datastore" or "content_library".
+
+push_type = "datastore"
+
+# --- Datastore settings (used when push_type = "datastore") ---
+
+vsphere_datastore      = "sfo-m01-cl01-ds-vsan01"
+vsphere_datastore_path = "iso"
+
+# --- Content Library settings (used when push_type = "content_library") ---
+
+# vsphere_content_library = "sfo-m01-lib01"
+
+# ISO Upload Settings
+
+iso_base_path = "../../iso"
