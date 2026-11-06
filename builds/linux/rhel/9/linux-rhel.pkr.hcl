@@ -187,6 +187,7 @@ source "vsphere-iso" "linux-rhel" {
   dynamic "content_library_destination" {
     for_each = var.common_content_library_enabled ? [1] : []
     content {
+      name        = local.vm_name
       library     = var.common_content_library
       description = local.build_description
       ovf         = var.common_content_library_ovf

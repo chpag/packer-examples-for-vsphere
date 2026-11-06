@@ -68,6 +68,7 @@
   loop: "{{ find_tmp_directories.files }}"
   loop_control:
     label: "{{ item.path }}"
+  ignore_errors: true # noqa ignore-errors
 
 # Tasks to find the SSH host keys.
 - name: Finding the SSH host keys.

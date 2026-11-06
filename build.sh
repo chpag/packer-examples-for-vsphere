@@ -588,6 +588,8 @@ select_version() {
     done
 }
 
+experience=""
+
 select_edition() {
     edition_descriptions=$(jq -r --arg os "$os" --arg dist "$dist" --arg version "$version" '.os[] | select(.name == $os) | .types[] | select(.description == $dist) | .versions[$version][] | .editions[] | select(.enabled == "true") | .edition' "$json_path")
     IFS=$'\n' read -rd '' -a edition_array <<<"$(echo "$edition_descriptions" | sort -r)"
@@ -603,7 +605,7 @@ select_edition() {
             exit 1
         fi
         echo -e "\033[0;32m✔ Selected edition:\033[0m $edition"
-        select_build
+        select_experience
         return
     fi
 
@@ -626,11 +628,53 @@ select_edition() {
             break
         elif [[ $edition_input =~ ^[0-9]+$ ]] && ((edition_input >= 1 && edition_input <= ${#edition_array[@]})); then
             edition=${edition_array[$((edition_input - 1))]}
-            select_build
+            select_experience
             break
         else
             printf "\n"
             print_message warn "\033[33mInvalid Selection:\033[0m Enter a number between 1 and ${#edition_array[@]}.\n"
+            printf "\n"
+        fi
+    done
+}
+
+select_experience() {
+    # Only applies to Windows Server builds.
+    if [[ "$dist" != *"Windows Server"* ]]; then
+        select_build
+        return
+    fi
+
+    clear
+    printf "\nSelect an experience for %s %s %s:\n\n" "$dist" "$edition" "$version"
+    printf "1: Core\n"
+    printf "2: Desktop Experience\n"
+    printf "3: Both\n"
+    printf "\n"
+    prompt_user
+
+    while true; do
+        read -r -p "Select an experience: " exp_input
+        if [[ "$exp_input" == [qQ] ]]; then
+            exit 0
+        elif [[ "$exp_input" == [bB] ]]; then
+            select_edition
+            break
+        elif [[ "$exp_input" == "1" ]]; then
+            experience="core"
+            select_build
+            break
+        elif [[ "$exp_input" == "2" ]]; then
+            experience="dexp"
+            select_build
+            break
+        elif [[ "$exp_input" == "3" ]]; then
+            experience="both"
+            select_build
+            break
+        else
+            printf "\n"
+            print_message warn "\033[33mInvalid Selection:\033[0m Enter 1, 2, or 3.\n"
             printf "\n"
         fi
     done
@@ -868,7 +912,11 @@ select_build() {
             validate_windows_username "$config_path/build.pkrvars.hcl"
             printf "Starting the build of %s %s...\n\n" "$dist" "$version"
             command="packer build -force -on-error=ask $debug_option"
-            command+=" --only=vsphere-iso.windows-server-standard-dexp,vsphere-iso.windows-server-standard-core"
+            case "$experience" in
+                "core") command+=" --only=vsphere-iso.windows-server-standard-core" ;;
+                "dexp") command+=" --only=vsphere-iso.windows-server-standard-dexp" ;;
+                *)      command+=" --only=vsphere-iso.windows-server-standard-core,vsphere-iso.windows-server-standard-dexp" ;;
+            esac
 
             for var_file in "${var_files[@]}"; do
                 command+=" -var-file=\"$config_path/${!var_file}\""
@@ -889,7 +937,11 @@ select_build() {
             validate_windows_username "$config_path/build.pkrvars.hcl"
             printf "Starting the build of %s %s...\n\n" "$dist" "$version"
             command="packer build -force -on-error=ask $debug_option"
-            command+=" --only vsphere-iso.windows-server-datacenter-dexp,vsphere-iso.windows-server-datacenter-core"
+            case "$experience" in
+                "core") command+=" --only=vsphere-iso.windows-server-datacenter-core" ;;
+                "dexp") command+=" --only=vsphere-iso.windows-server-datacenter-dexp" ;;
+                *)      command+=" --only=vsphere-iso.windows-server-datacenter-core,vsphere-iso.windows-server-datacenter-dexp" ;;
+            esac
 
             for var_file in "${var_files[@]}"; do
                 command+=" -var-file=\"$config_path/${!var_file}\""

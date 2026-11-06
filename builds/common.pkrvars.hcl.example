@@ -17,7 +17,7 @@ common_remove_cdrom         = true
 common_template_conversion         = false
 common_content_library             = "sfo-w01-lib01"
 common_content_library_enabled     = true
-common_content_library_ovf         = true
+common_content_library_ovf         = false
 common_content_library_destroy     = true
 common_content_library_skip_export = false
 

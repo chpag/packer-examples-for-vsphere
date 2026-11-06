@@ -1,0 +1,80 @@
+terraform {
+  required_providers {
+    vsphere = {
+      source  = "vmware/vsphere"
+      version = "2.17.1"
+    }
+  }
+}
+
+provider "vsphere" {
+  user                 = var.vsphere_username
+  password             = var.vsphere_password
+  vsphere_server       = var.vsphere_server
+  allow_unverified_ssl = true
+}
+
+data "vsphere_datacenter" "dc" {
+  name = var.vsphere_datacenter
+}
+
+data "vsphere_datastore" "ds" {
+  name          = var.vsphere_datastore
+  datacenter_id = data.vsphere_datacenter.dc.id
+}
+
+data "vsphere_compute_cluster" "cluster" {
+  name          = var.vsphere_cluster
+  datacenter_id = data.vsphere_datacenter.dc.id
+}
+
+data "vsphere_network" "network" {
+  name          = var.vsphere_network
+  datacenter_id = data.vsphere_datacenter.dc.id
+}
+
+# Step 1 — Create content library and item
+resource "vsphere_content_library" "lib" {
+  name            = var.vsphere_content_library
+  storage_backing = [data.vsphere_datastore.ds.id]
+}
+
+resource "vsphere_content_library_item" "tinyvm" {
+  name       = "TinyVM"
+  library_id = vsphere_content_library.lib.id
+  type       = "ovf"
+  file_url   = "https://storage.googleapis.com/vsphere-acctest/TinyVM/TinyVM.ova"
+}
+
+data "vsphere_content_library_item" "template" {
+  name       = vsphere_content_library_item.tinyvm.name
+  library_id = vsphere_content_library.lib.id
+  type       = "ova"
+}
+
+resource "vsphere_virtual_machine" "web" {
+  name             = "repro-vm-01"
+  resource_pool_id = data.vsphere_compute_cluster.cluster.resource_pool_id
+  datastore_id     = data.vsphere_datastore.ds.id
+  num_cpus         = 4
+  memory           = 1024
+  guest_id         = "other3xLinuxGuest"
+
+  network_interface {
+    network_id = data.vsphere_network.network.id
+  }
+
+  disk {
+    label = "disk0"
+    size  = 20
+  }
+
+  clone {
+    template_uuid = data.vsphere_content_library_item.template.id
+  }
+
+  lifecycle {
+    # Même avec ignore_changes, ça ne suffit pas si l'item disparaît
+    ignore_changes = [clone.0.template_uuid]
+  }
+}

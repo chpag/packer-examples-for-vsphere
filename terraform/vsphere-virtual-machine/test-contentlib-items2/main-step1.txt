@@ -1,0 +1,55 @@
+# STEP 1 — initial deploy
+# Run: terraform apply
+# Then delete TinyVM manually in vCenter
+# Then: terraform state rm vsphere_content_library_item.tinyvm
+# Then switch to main-step2.tf
+
+resource "vsphere_content_library" "lib" {
+  name            = "repro-library"
+  storage_backing = [data.vsphere_datastore.ds.id]
+}
+
+resource "vsphere_content_library_item" "tinyvm" {
+  name       = "TinyVM"
+  library_id = vsphere_content_library.lib.id
+  type       = "ovf"
+  file_url   = "https://storage.googleapis.com/vsphere-acctest/TinyVM/TinyVM.ova"
+}
+
+data "vsphere_content_library_items" "template" {
+  library_id = vsphere_content_library.lib.id
+  name       = "TinyVM"
+}
+
+locals {
+  template_id = length(data.vsphere_content_library_items.template.items) > 0 ? data.vsphere_content_library_items.template.items[0].id : null
+}
+
+resource "vsphere_virtual_machine" "web" {
+  name             = "repro-vm-01"
+  resource_pool_id = data.vsphere_compute_cluster.cluster.resource_pool_id
+  datastore_id     = data.vsphere_datastore.ds.id
+  num_cpus         = 2
+  memory           = 1024
+  guest_id         = "other3xLinuxGuest"
+
+  network_interface {
+    network_id = data.vsphere_network.network.id
+  }
+
+  disk {
+    label = "disk0"
+    size  = 20
+  }
+
+  dynamic "clone" {
+    for_each = local.template_id != null ? [1] : []
+    content {
+      template_uuid = local.template_id
+    }
+  }
+
+  lifecycle {
+    ignore_changes = [clone]
+  }
+}
